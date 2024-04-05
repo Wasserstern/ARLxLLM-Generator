@@ -1,0 +1,29 @@
+{
+    "TiltToGoal": {
+        "checkpoints": [
+            {
+                "steps": 1639,
+                "file_path": "results\\BoardTilt1\\TiltToGoal\\TiltToGoal-1639.onnx",
+                "reward": 0.0,
+                "creation_time": 1712319530.1755364,
+                "auxillary_file_paths": [
+                    "results\\BoardTilt1\\TiltToGoal\\TiltToGoal-1639.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 1639,
+            "file_path": "results\\BoardTilt1\\TiltToGoal.onnx",
+            "reward": 0.0,
+            "creation_time": 1712319530.1755364,
+            "auxillary_file_paths": [
+                "results\\BoardTilt1\\TiltToGoal\\TiltToGoal-1639.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "0.30.0",
+        "torch_version": "1.13.1+cu117"
+    }
+}

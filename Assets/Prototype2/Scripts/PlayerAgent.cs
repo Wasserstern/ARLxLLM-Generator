@@ -52,6 +52,7 @@ public class PlayerAgent : Agent
         }
         sensor.AddObservation(startTransform.localPosition);
         sensor.AddObservation(goalTransform.localPosition);
+        sensor.AddObservation(transform.rotation);
     }
     public override void OnActionReceived(ActionBuffers actions)
     {
