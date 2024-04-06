@@ -15,9 +15,12 @@ public class BoardTiltAgent : Agent
     public Transform marbleTransform;
     public Transform goalTransform;
     public Transform allHoles;
+    public float gravityScale;
     public Transform groundTransform;
     Vector3 initialMarblePosition;
     Quaternion initialBoardRotation;
+    Rigidbody rgbd;
+    Vector3 eulerAngleVelocity;
 
     public Material penaltyMaterial;
     public Material rewardMaterial;
@@ -26,19 +29,22 @@ public class BoardTiltAgent : Agent
     {
         initialMarblePosition = marbleTransform.position;
         initialBoardRotation = transform.rotation;
-        if(marbleTransform.GetComponent<Rigidbody>().IsSleeping()){
-        }
-
+        rgbd = GetComponent<Rigidbody>();
+        eulerAngleVelocity = Vector3.zero;
 
     }
     public override void OnEpisodeBegin()
     {
         transform.rotation = initialBoardRotation;
+        marbleTransform.GetComponent<Rigidbody>().constraints =RigidbodyConstraints.FreezeAll;
+        marbleTransform.GetComponent<Rigidbody>().velocity = Vector3.zero;
         marbleTransform.position = initialMarblePosition;
         marbleTransform.GetComponent<Rigidbody>().velocity = Vector3.zero;
         Bounds groundBounds = groundTransform.GetComponent<BoxCollider>().bounds;
         Vector3 nextGoalPosition = new Vector3(Random.Range(groundBounds.min.x + 0.5f, groundBounds.max.x - 0.5f),goalTransform.position.y, Random.Range(groundBounds.min.z + 0.5f, groundBounds.max.z - 0.5f));
         goalTransform.position = nextGoalPosition;
+        marbleTransform.GetComponent<Rigidbody>().constraints =RigidbodyConstraints.None;
+        eulerAngleVelocity = Vector3.zero;
     }
     public override void CollectObservations(VectorSensor sensor)
     {
@@ -64,13 +70,20 @@ public class BoardTiltAgent : Agent
             tiltZ = 0f;
         }
 
-        transform.Rotate(new Vector3(tiltX * tiltSpeed * Time.deltaTime, 0f, tiltZ * tiltSpeed * Time.deltaTime));
 
+        eulerAngleVelocity = new Vector3(tiltX * tiltSpeed , 0f, tiltZ * tiltSpeed);
+        /*
         if(Vector3.Distance(initialMarblePosition, marbleTransform.position) > maxDistance){
             AddReward(-1f);
             groundTransform.GetComponent<MeshRenderer>().material = penaltyMaterial;
             EndEpisode();
         }
+        */
+
+    }
+    private void FixedUpdate(){
+        Quaternion deltaRotation = Quaternion.Euler(eulerAngleVelocity * Time.fixedDeltaTime);
+        rgbd.MoveRotation(rgbd.rotation * deltaRotation);
     }
 
     public override void Heuristic(in ActionBuffers actionsOut)
@@ -81,12 +94,15 @@ public class BoardTiltAgent : Agent
     }
 
     public void MarbleCollided(Collision other){
+        
         if(other.gameObject.layer == LayerMask.NameToLayer("Goal")){
+            Debug.Log("FArt");
             SetReward(1f);
             groundTransform.GetComponent<MeshRenderer>().material = rewardMaterial;
             EndEpisode();
         }
         else if(other.gameObject.layer == LayerMask.NameToLayer("Penalty")){
+            Debug.Log("FArt");
             SetReward(-1f);
             groundTransform.GetComponent<MeshRenderer>().material = penaltyMaterial;
             EndEpisode();
@@ -99,7 +115,6 @@ public class BoardTiltAgent : Agent
             EndEpisode();
         }
         else if(other.gameObject.layer == LayerMask.NameToLayer("Penalty")){
-            Debug.Log("Just collided with wall");
             SetReward(-1f);
             groundTransform.GetComponent<MeshRenderer>().material = penaltyMaterial;
             EndEpisode();
