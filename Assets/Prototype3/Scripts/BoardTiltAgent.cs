@@ -11,6 +11,9 @@ public class BoardTiltAgent : Agent
     public float maxTiltAngle;
     public float tiltSpeed;
     public float maxDistance;
+    
+    public int obstacleCount;
+    public int obstalceRows;
 
     public Transform marbleTransform;
     public Transform goalTransform;
@@ -21,6 +24,8 @@ public class BoardTiltAgent : Agent
     Quaternion initialBoardRotation;
     Rigidbody rgbd;
     Vector3 eulerAngleVelocity;
+    float startDistanceToGoal;
+    float currentDistanceToGoal;
 
     public Material penaltyMaterial;
     public Material rewardMaterial;
@@ -31,6 +36,8 @@ public class BoardTiltAgent : Agent
         initialBoardRotation = transform.rotation;
         rgbd = GetComponent<Rigidbody>();
         eulerAngleVelocity = Vector3.zero;
+
+
 
     }
     public override void OnEpisodeBegin()
@@ -45,6 +52,9 @@ public class BoardTiltAgent : Agent
         goalTransform.position = nextGoalPosition;
         marbleTransform.GetComponent<Rigidbody>().constraints =RigidbodyConstraints.None;
         eulerAngleVelocity = Vector3.zero;
+
+        startDistanceToGoal = Vector3.Distance(marbleTransform.position, goalTransform.position);
+        currentDistanceToGoal = startDistanceToGoal;
     }
     public override void CollectObservations(VectorSensor sensor)
     {
@@ -79,7 +89,12 @@ public class BoardTiltAgent : Agent
             EndEpisode();
         }
         */
-
+        float distanceReward = 1f - currentDistanceToGoal / startDistanceToGoal;
+        if(distanceReward < 0f){
+            distanceReward = 0f;
+        }
+        SetReward(distanceReward);
+        
     }
     private void FixedUpdate(){
         Quaternion deltaRotation = Quaternion.Euler(eulerAngleVelocity * Time.fixedDeltaTime);
