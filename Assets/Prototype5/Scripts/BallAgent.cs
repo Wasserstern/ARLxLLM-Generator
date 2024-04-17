@@ -9,10 +9,12 @@ using UnityEngine;
 public class BallAgent : Agent
 {   
     // References
+    public Transform cameraTransform;
     Rigidbody rgbd;
     Collider col;
+    
     // Settings
-
+    public float camMoveSpeed;
 
     // Bounce settings
     public float standardBounce;
@@ -23,27 +25,33 @@ public class BallAgent : Agent
     public float bounceDecreaseFast;
     // Movement settings
     public float moveAcceleration;
-    public float moveDecceleration;
+    public float moveDeceleration;
+    public float moveDecelerationFast;
     public float maxMoveSpeed;
     [Range(0f, 1f)]
     public float deadZoneMagnitude;
     public float minVelocityMagnitude;
 
-    // Runtime stuff
+    // Runtime variables
     [SerializeField]
     float currentBounce;
-    Vector2 inputDirection;
+    Vector3 inputDirection;
     bool isPressingBounce;
     bool isPressingStiff;
+    Vector3 cameraTargetPosition;
+
+    // AI variables
+    Vector3 startPositionLocal;
     public override void Initialize()
     {
         rgbd = GetComponent<Rigidbody>();
         col = GetComponent<Collider>();
         currentBounce = standardBounce;
+        startPositionLocal = transform.localPosition;
     }
     public override void OnEpisodeBegin()
     {
-        
+        transform.position = startPositionLocal;
     }
     public override void CollectObservations(VectorSensor sensor)
     {
@@ -51,13 +59,13 @@ public class BallAgent : Agent
     }
     public override void OnActionReceived(ActionBuffers actions)
     {
-        inputDirection = new Vector2(actions.ContinuousActions[0], actions.ContinuousActions[1]);
+        //inputDirection = new Vector3(actions.ContinuousActions[0],0f, actions.ContinuousActions[1]);
 
         isPressingBounce = actions.DiscreteActions[0] == 1;
         isPressingStiff = actions.DiscreteActions[1] == 1;
         float nextBounce = currentBounce;
         if(isPressingBounce){
-            nextBounce += bounceIncrease + Time.deltaTime;
+            nextBounce += bounceIncrease * Time.deltaTime;
             if(nextBounce > maxBounce){
                 nextBounce = maxBounce;
             }
@@ -70,8 +78,8 @@ public class BallAgent : Agent
         }
         else{
             nextBounce -= bounceDecreaseStandard * Time.deltaTime;
-             if(nextBounce < minBounce){
-                nextBounce = minBounce;
+             if(nextBounce < standardBounce){
+                nextBounce = standardBounce;
             }
         }
         currentBounce = nextBounce;
@@ -90,7 +98,7 @@ public class BallAgent : Agent
 
     void Start()
     {
-        
+        cameraTargetPosition = cameraTransform.position;
     }
 
     void Update()
@@ -99,20 +107,41 @@ public class BallAgent : Agent
     }
 
     void FixedUpdate(){
+        inputDirection = new Vector3(Input.GetAxis("Horizontal"), 0f, Input.GetAxis("Vertical"));
+        Vector3 velocityXZ = new Vector3(rgbd.velocity.x, 0f, rgbd.velocity.z);
         if(inputDirection.magnitude > deadZoneMagnitude){
             // Apply input
-            rgbd.AddForce(inputDirection * moveAcceleration, ForceMode.Force);
+            rgbd.AddForce(inputDirection * moveAcceleration, ForceMode.Acceleration);
+            /*
+            Vector3 inputDirectionNormal = inputDirection.normalized;
+            Vector3 velocityNormal = new Vector3(rgbd.velocity.x, 0f, rgbd.velocity.z).normalized;
+            if(Vector3.Angle(inputDirectionNormal, velocityNormal) > 30f && rgbd.velocity.magnitude > minVelocityMagnitude){
+                Vector3 oppositeDirection = new Vector3(-rgbd.velocity.x, 0f, -rgbd.velocity.z).normalized;
+                rgbd.AddForce(oppositeDirection * moveDecelerationFast, ForceMode.Force);
+            }
+            */
         }
         else{
-            //TODO: Slow down ball via force, not directly
+            if(velocityXZ.magnitude > minVelocityMagnitude){
+                Vector3 oppositeDirection = new Vector3(-rgbd.velocity.x, 0f, -rgbd.velocity.z).normalized;
+                rgbd.AddForce(oppositeDirection * moveDeceleration, ForceMode.Acceleration);
+            }
         }
 
-        if(rgbd.velocity.magnitude > maxMoveSpeed){
+        if(velocityXZ.magnitude > maxMoveSpeed){
             // Slow down ball if its velocity exceeds the allowed maximum
-            float magnitudeDifference = rgbd.velocity.magnitude - maxMoveSpeed;
-            Vector2 oppositeDirection = -rgbd.velocity.normalized;
-            rgbd.AddForce(oppositeDirection * magnitudeDifference, ForceMode.Force);
+            float magnitudeDifference = velocityXZ.magnitude - maxMoveSpeed;
+            Vector3 oppositeDirection = -velocityXZ.normalized;
+            rgbd.AddForce(oppositeDirection * magnitudeDifference * moveDecelerationFast, ForceMode.Acceleration);
         }
+        cameraTargetPosition = new Vector3(transform.position.x, cameraTargetPosition.y, cameraTargetPosition.z);
+        if(cameraTransform.position != cameraTargetPosition){
+            cameraTransform.position = Vector3.MoveTowards(cameraTransform.position, cameraTargetPosition, camMoveSpeed * Time.deltaTime);
+        }
+    }
+
+    void LateUpdate(){
+
     }
 
     private void OnCollisionEnter(Collision other){
