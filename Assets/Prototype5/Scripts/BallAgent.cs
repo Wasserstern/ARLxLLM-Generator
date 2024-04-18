@@ -15,6 +15,8 @@ public class BallAgent : Agent
     
     // Settings
     public float camMoveSpeed;
+    
+    public float camTargetMaxDistance;
 
     // Bounce settings
     public float standardBounce;
@@ -39,6 +41,8 @@ public class BallAgent : Agent
     bool isPressingBounce;
     bool isPressingStiff;
     Vector3 cameraTargetPosition;
+    Vector3 camOffsetPosition;
+    Vector3 camVelocity;
 
     // AI variables
     Vector3 startPositionLocal;
@@ -51,7 +55,13 @@ public class BallAgent : Agent
     }
     public override void OnEpisodeBegin()
     {
-        transform.position = startPositionLocal;
+        transform.localPosition = startPositionLocal;
+        rgbd.velocity = Vector3.zero;
+        currentBounce = standardBounce;
+        isPressingBounce = false;
+        isPressingStiff = false;
+        inputDirection = Vector3.zero;
+        
     }
     public override void CollectObservations(VectorSensor sensor)
     {
@@ -99,6 +109,7 @@ public class BallAgent : Agent
     void Start()
     {
         cameraTargetPosition = cameraTransform.position;
+        camOffsetPosition = cameraTransform.localPosition;
     }
 
     void Update()
@@ -134,9 +145,17 @@ public class BallAgent : Agent
             Vector3 oppositeDirection = -velocityXZ.normalized;
             rgbd.AddForce(oppositeDirection * magnitudeDifference * moveDecelerationFast, ForceMode.Acceleration);
         }
-        cameraTargetPosition = new Vector3(transform.position.x, cameraTargetPosition.y, cameraTargetPosition.z);
+
+        // Camera udpates
+        Vector3 nextCameraTargetPosition = transform.position + camOffsetPosition;
+        if(Vector3.Distance(nextCameraTargetPosition, cameraTargetPosition) > camTargetMaxDistance){
+            cameraTargetPosition = nextCameraTargetPosition;
+        }
+        
         if(cameraTransform.position != cameraTargetPosition){
-            cameraTransform.position = Vector3.MoveTowards(cameraTransform.position, cameraTargetPosition, camMoveSpeed * Time.deltaTime);
+            float camDistance = Vector3.Distance(cameraTransform.position, cameraTargetPosition);
+            float currentCamSpeed = camMoveSpeed * Mathf.Clamp(camTargetMaxDistance / camDistance, 0f, 2f);
+            cameraTransform.position = Vector3.SmoothDamp(cameraTransform.position, cameraTargetPosition, ref camVelocity, camMoveSpeed);
         }
     }
 
@@ -148,6 +167,18 @@ public class BallAgent : Agent
         if(other.gameObject.layer == LayerMask.NameToLayer("Ground")){
             Vector2 bounceDirection = other.contacts[0].normal;
             rgbd.AddForce(bounceDirection * currentBounce, ForceMode.Impulse);
+        }
+        else if(other.gameObject.layer == LayerMask.NameToLayer("Death")){
+            EndEpisode();
+        }
+    }
+    
+    private void OnTriggerEnter(Collider other){
+        if(other.gameObject.layer == LayerMask.NameToLayer("Death")){
+            EndEpisode();
+        }
+        else if(other.gameObject.layer == LayerMask.NameToLayer("Goal")){
+            EndEpisode();
         }
     }
 }
