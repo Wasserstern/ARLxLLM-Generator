@@ -16,9 +16,11 @@ public class TowerGenerator : MonoBehaviour
 
     public GameObject platformPrefab;
     public GameObject fragilePlatformPRefab;
+    public GameObject goalPrefab;
     
     // Runtime
     Vector3 currentPosition;
+    public GameObject goalObject;
     
     
     void Start()
@@ -26,7 +28,11 @@ public class TowerGenerator : MonoBehaviour
 
     }
 
-    void GenerateTower(){
+    public void GenerateTower(){
+        
+        for(int i = 0; i < transform.childCount; i++){
+            GameObject.Destroy(transform.GetChild(i).gameObject);
+        }
         currentPosition = transform.position;
         while(currentPosition.y < towerHeight){
                 
@@ -62,6 +68,9 @@ public class TowerGenerator : MonoBehaviour
             currentPosition = nextPosition;
             
         }
+        GameObject goal = GameObject.Instantiate(goalPrefab, transform);
+        goal.transform.position = currentPosition + Vector3.up * 4f;
+        goalObject = goal;
     }
 
     // Update is called once per frame

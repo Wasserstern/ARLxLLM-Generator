@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.MLAgents;
 using Unity.MLAgents.Actuators;
+using Unity.MLAgents.Policies;
 using Unity.MLAgents.Sensors;
 using UnityEngine;
 
@@ -10,12 +11,12 @@ public class BallAgent : Agent
 {   
     // References
     public Transform cameraTransform;
+    public TowerGenerator towerGenerator;
     Rigidbody rgbd;
     Collider col;
     
     // Settings
     public float camMoveSpeed;
-    
     public float camTargetMaxDistance;
 
     // Bounce settings
@@ -33,6 +34,9 @@ public class BallAgent : Agent
     [Range(0f, 1f)]
     public float deadZoneMagnitude;
     public float minVelocityMagnitude;
+    // ML Agent settings
+    public float observationRadius;
+    public int maxObservations;
 
     // Runtime variables
     [SerializeField]
@@ -46,31 +50,54 @@ public class BallAgent : Agent
 
     // AI variables
     Vector3 startPositionLocal;
+    float initalGoalDistance;
     public override void Initialize()
     {
         rgbd = GetComponent<Rigidbody>();
         col = GetComponent<Collider>();
         currentBounce = standardBounce;
         startPositionLocal = transform.localPosition;
+        
     }
     public override void OnEpisodeBegin()
     {
+        
         transform.localPosition = startPositionLocal;
         rgbd.velocity = Vector3.zero;
         currentBounce = standardBounce;
         isPressingBounce = false;
         isPressingStiff = false;
         inputDirection = Vector3.zero;
+        towerGenerator.GenerateTower();
+        initalGoalDistance = Vector3.Distance(towerGenerator.goalObject.transform.position, transform.position);
         
     }
     public override void CollectObservations(VectorSensor sensor)
     {
-        base.CollectObservations(sensor);
+        // Other
+        sensor.AddObservation(currentBounce);
+        sensor.AddObservation(transform.localPosition);
+
+        // Add surroundings
+        Collider[] obsverationColliders = Physics.OverlapSphere(transform.position, observationRadius, LayerMask.GetMask("Ground"));
+        int observationIndex = 0;
+        foreach(Collider oCol in obsverationColliders){
+            if(oCol.gameObject.tag == "Platform"){
+                Debug.Log("Found some platform");
+                sensor.AddObservation(oCol.transform.localPosition);
+                observationIndex++;
+            }
+            if(observationIndex >= maxObservations){
+                break;
+            }
+        }
+        for(int i = observationIndex; i < maxObservations; i++){
+            sensor.AddObservation(Vector3.zero);
+        }
     }
     public override void OnActionReceived(ActionBuffers actions)
     {
-        //inputDirection = new Vector3(actions.ContinuousActions[0],0f, actions.ContinuousActions[1]);
-
+        inputDirection = new Vector3(actions.ContinuousActions[0],0f, actions.ContinuousActions[1]);
         isPressingBounce = actions.DiscreteActions[0] == 1;
         isPressingStiff = actions.DiscreteActions[1] == 1;
         float nextBounce = currentBounce;
@@ -93,6 +120,9 @@ public class BallAgent : Agent
             }
         }
         currentBounce = nextBounce;
+        
+        float currentGoalDistance = Vector3.Distance(towerGenerator.goalObject.transform.position, transform.position);
+        SetReward(initalGoalDistance / currentGoalDistance);
     }
     public override void Heuristic(in ActionBuffers actionsOut)
     {
@@ -118,7 +148,7 @@ public class BallAgent : Agent
     }
 
     void FixedUpdate(){
-        inputDirection = new Vector3(Input.GetAxis("Horizontal"), 0f, Input.GetAxis("Vertical"));
+        //inputDirection = new Vector3(Input.GetAxis("Horizontal"), 0f, Input.GetAxis("Vertical"));
         Vector3 velocityXZ = new Vector3(rgbd.velocity.x, 0f, rgbd.velocity.z);
         if(inputDirection.magnitude > deadZoneMagnitude){
             // Apply input
@@ -169,15 +199,18 @@ public class BallAgent : Agent
             rgbd.AddForce(bounceDirection * currentBounce, ForceMode.Impulse);
         }
         else if(other.gameObject.layer == LayerMask.NameToLayer("Death")){
-            EndEpisode();
+            SetReward(-1f);
+           EndEpisode();
         }
     }
     
     private void OnTriggerEnter(Collider other){
         if(other.gameObject.layer == LayerMask.NameToLayer("Death")){
+            SetReward(-1f);
             EndEpisode();
         }
         else if(other.gameObject.layer == LayerMask.NameToLayer("Goal")){
+            SetReward(GetCumulativeReward() + 1f);
             EndEpisode();
         }
     }
