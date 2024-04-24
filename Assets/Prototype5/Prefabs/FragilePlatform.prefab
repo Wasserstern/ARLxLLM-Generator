@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 4722599547612695703}
   - component: {fileID: 3522370923728380054}
   - component: {fileID: 5386112218655390194}
+  - component: {fileID: 878334804854657224}
   m_Layer: 8
   m_Name: FragilePlatform
   m_TagString: Platform
@@ -123,3 +124,16 @@ MonoBehaviour:
   standardMaterial: {fileID: 2100000, guid: fbfb9e9dfcef21a488dcf9e610fb378b, type: 2}
   destroyedMaterial: {fileID: 2100000, guid: 97d002f7c272d254b8625ca865a1a7ab, type: 2}
   canRebuild: 1
+--- !u!114 &878334804854657224
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6906717340927674994}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8a9c781dbb4eb9479acef259931e4d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  hasBeenHit: 0

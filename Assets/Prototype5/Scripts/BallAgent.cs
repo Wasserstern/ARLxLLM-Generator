@@ -72,11 +72,12 @@ public class BallAgent : Agent
         initalGoalDistance = Vector3.Distance(towerGenerator.goalObject.transform.position, transform.position);
         
     }
+    
     public override void CollectObservations(VectorSensor sensor)
     {
         // Other
-        sensor.AddObservation(currentBounce);
-        sensor.AddObservation(transform.localPosition);
+        sensor.AddObservation(NormalizeObservationVector(rgbd.velocity, 0, 1));
+        sensor.AddObservation(NormalizeObservationVector(transform.localPosition, 0, 1));
 
         // Add surroundings
         Collider[] obsverationColliders = Physics.OverlapSphere(transform.position, observationRadius, LayerMask.GetMask("Ground"));
@@ -84,7 +85,7 @@ public class BallAgent : Agent
         foreach(Collider oCol in obsverationColliders){
             if(oCol.gameObject.tag == "Platform"){
                 Debug.Log("Found some platform");
-                sensor.AddObservation(oCol.transform.localPosition);
+                sensor.AddObservation(NormalizeObservationVector(oCol.transform.localPosition, 0, 1));
                 observationIndex++;
             }
             if(observationIndex >= maxObservations){
@@ -122,6 +123,16 @@ public class BallAgent : Agent
         currentBounce = nextBounce;
         
         float currentGoalDistance = Vector3.Distance(towerGenerator.goalObject.transform.position, transform.position);
+
+        RaycastHit platformHit;
+        Vector3 rayDirection = (new Vector3(transform.position.x, transform.position.y -1f, transform.position.z) - transform.position).normalized;
+        if(Physics.Raycast(transform.position, rayDirection,out platformHit, 0.6f,   LayerMask.GetMask("Ground") )){
+            if(platformHit.transform.gameObject.tag == "Platform"&& !platformHit.transform.GetComponent<Platform>().hasBeenHit){
+                platformHit.transform.GetComponent<Platform>().hasBeenHit = true;
+                AddReward(0.01f);
+            }
+        }
+
         SetReward(initalGoalDistance / currentGoalDistance);
     }
     public override void Heuristic(in ActionBuffers actionsOut)
@@ -134,6 +145,13 @@ public class BallAgent : Agent
 
         discreteActions[0] = Convert.ToInt32(Input.GetKey(KeyCode.J));
         discreteActions[1] = Convert.ToInt32(Input.GetKey(KeyCode.K));
+    }
+
+    private Vector3 NormalizeObservationVector(Vector3 vector, float minValue,  float maxValue){
+        float x = (vector.x - minValue)/(maxValue - minValue);
+        float y = (vector.x - minValue)/(maxValue - minValue);
+        float z = (vector.x - minValue)/(maxValue - minValue);
+        return new Vector3(x, y, z);
     }
 
     void Start()
@@ -210,7 +228,7 @@ public class BallAgent : Agent
             EndEpisode();
         }
         else if(other.gameObject.layer == LayerMask.NameToLayer("Goal")){
-            SetReward(GetCumulativeReward() + 1f);
+            SetReward(5f);
             EndEpisode();
         }
     }
