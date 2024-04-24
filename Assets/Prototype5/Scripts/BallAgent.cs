@@ -207,10 +207,6 @@ public class BallAgent : Agent
         }
     }
 
-    void LateUpdate(){
-
-    }
-
     private void OnCollisionEnter(Collision other){
         if(other.gameObject.layer == LayerMask.NameToLayer("Ground")){
             Vector2 bounceDirection = other.contacts[0].normal;
