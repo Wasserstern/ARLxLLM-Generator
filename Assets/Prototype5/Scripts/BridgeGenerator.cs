@@ -21,6 +21,7 @@ public class BridgeGenerator : MonoBehaviour
     float currentBridgeLength;
 
     public enum BridgeMode {undirected, directed}
+    public GameObject goalObject;
     void Start()
     {
         
@@ -43,9 +44,17 @@ public class BridgeGenerator : MonoBehaviour
         switch(bridgeMode){
             case BridgeMode.undirected:{
                 initialBridgeDirection = new Vector3(Random.Range(-1, 1f),Random.Range(-1f, 1f), Random.Range(-1f, 1f)).normalized;
+                int counter = 0;
                 while(currentBridgeLength < bridgeMaxLength)
                 {
-                    float nextDistance = Random.Range(minNextDistance, maxNextDistance);
+                    float nextDistance = 0;
+                    if(counter == 0){
+                        nextDistance = 25f;
+                    }
+                    else{
+                        nextDistance = Random.Range(minNextDistance, maxNextDistance);
+                    }
+                    counter++;
                     float nextAngleY = Random.Range(minNextAngle, maxNextAngle);
                     float nextAngleZ = Random.Range(minNextAngle, maxNextAngle);
                     Vector3 nextDirection = Quaternion.AngleAxis(nextAngleY, Vector3.up) * initialBridgeDirection;
@@ -68,12 +77,23 @@ public class BridgeGenerator : MonoBehaviour
             }
             case BridgeMode.directed:{
                 initialBridgeDirection = new Vector3(Random.Range(-1, 1f),0f, Random.Range(-1f, 1f)).normalized;
+                float nextDistance; 
+                float nextAngle;
+                Vector3 nextDirection;
+                Vector3 nextPlatformPosition;
+                int counter = 0;
                 while(currentBridgeLength < bridgeMaxLength)
                 {
-                    float nextDistance = Random.Range(minNextDistance, maxNextDistance);
-                    float nextAngle = Random.Range(minNextAngle, maxNextAngle);
-                    Vector3 nextDirection = Quaternion.AngleAxis(nextAngle, Vector3.up) * initialBridgeDirection;
-                    Vector3 nextPlatformPosition = currentPlatformPosition + nextDirection * nextDistance;
+                    if(counter == 0){
+                        nextDistance = 25f;
+                    }
+                    else{
+                        nextDistance = Random.Range(minNextDistance, maxNextDistance);
+                    }
+                    counter++;
+                    nextAngle = Random.Range(minNextAngle, maxNextAngle);
+                    nextDirection = Quaternion.AngleAxis(nextAngle, Vector3.up) * initialBridgeDirection;
+                    nextPlatformPosition = currentPlatformPosition + nextDirection * nextDistance;
 
                     if(Random.Range(0f, 1f) < fragilePlatformChance)
                     {
@@ -88,6 +108,14 @@ public class BridgeGenerator : MonoBehaviour
                     currentPlatformPosition = nextPlatformPosition;
                     currentBridgeLength += nextDistance;
                 }
+                nextDistance = Random.Range(minNextDistance, maxNextDistance);
+                nextAngle = Random.Range(minNextAngle, maxNextAngle);
+                nextDirection = Quaternion.AngleAxis(nextAngle, Vector3.up) * initialBridgeDirection;
+                nextPlatformPosition = currentPlatformPosition + nextDirection * nextDistance;
+
+                GameObject goal = GameObject.Instantiate(goalPrefab, transform);
+                goal.transform.position = nextPlatformPosition;
+                goalObject = goal;
                 break;
             }
         }

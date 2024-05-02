@@ -12,12 +12,16 @@ public class BallAgent : Agent
     // References
     public Transform cameraTransform;
     public TowerGenerator towerGenerator;
+    public BridgeGenerator bridgeGenerator;
+    public Material rewardAttainedMaterial;
+    public Material rewardUnattainedMaterial;
     Rigidbody rgbd;
     Collider col;
     
     // Settings
     public float camMoveSpeed;
     public float camTargetMaxDistance;
+    public float springMaxTime;
 
     // Bounce settings
     public float standardBounce;
@@ -35,9 +39,8 @@ public class BallAgent : Agent
     public float deadZoneMagnitude;
     public float minVelocityMagnitude;
     // ML Agent settings
-    public float observationRadius;
-    public int maxObservations;
-
+    public float deathDistance;
+    public bool useBounceMeter;
     // Runtime variables
     [SerializeField]
     float currentBounce;
@@ -47,104 +50,105 @@ public class BallAgent : Agent
     Vector3 cameraTargetPosition;
     Vector3 camOffsetPosition;
     Vector3 camVelocity;
+    float initialYPosition;
+    float currentSpringTime;
+    bool isSpringing;
 
     // AI variables
-    Vector3 startPositionLocal;
-    float initalGoalDistance;
+    Vector3 localStartPosition;
+    float rewardFraction;
+    [SerializeField]
+    GameObject currentTargetPlatform;
+    int currentTargetPlatformIndex;
+    
+
     public override void Initialize()
     {
         rgbd = GetComponent<Rigidbody>();
         col = GetComponent<Collider>();
         currentBounce = standardBounce;
-        startPositionLocal = transform.localPosition;
+        localStartPosition = transform.localPosition;
         
     }
     public override void OnEpisodeBegin()
     {
         
-        transform.localPosition = startPositionLocal;
+        transform.localPosition = localStartPosition;
         rgbd.velocity = Vector3.zero;
         currentBounce = standardBounce;
         isPressingBounce = false;
         isPressingStiff = false;
         inputDirection = Vector3.zero;
-        towerGenerator.GenerateTower();
-        initalGoalDistance = Vector3.Distance(towerGenerator.goalObject.transform.position, transform.position);
-        
+        currentTargetPlatform = null;
+        bridgeGenerator.GenerateBridge();
+        initialYPosition = transform.localPosition.y;
+        rewardFraction = 1f / bridgeGenerator.transform.childCount;
+        currentTargetPlatform = bridgeGenerator.transform.GetChild(0).gameObject;
+        currentTargetPlatformIndex = 0;
     }
-    
+
     public override void CollectObservations(VectorSensor sensor)
     {
-        // Other
-        sensor.AddObservation(NormalizeObservationVector(rgbd.velocity, 0, 1));
-        sensor.AddObservation(NormalizeObservationVector(transform.localPosition, 0, 1));
-
-        // Add surroundings
-        Collider[] obsverationColliders = Physics.OverlapSphere(transform.position, observationRadius, LayerMask.GetMask("Ground"));
-        int observationIndex = 0;
-        foreach(Collider oCol in obsverationColliders){
-            if(oCol.gameObject.tag == "Platform"){
-                Debug.Log("Found some platform");
-                sensor.AddObservation(NormalizeObservationVector(oCol.transform.localPosition, 0, 1));
-                observationIndex++;
-            }
-            if(observationIndex >= maxObservations){
-                break;
-            }
+        currentTargetPlatform = bridgeGenerator.transform.GetChild(currentTargetPlatformIndex).gameObject;
+        if(currentTargetPlatform != null){
+            Vector2 localPositionXZ = new Vector2(transform.localPosition.x, transform.localPosition.z);
+            Vector2 localTargetPositionXZ = new Vector2(currentTargetPlatform.transform.localPosition.x, currentTargetPlatform.transform.localPosition.z);
+            float currentTargetDistance = Vector2.Distance(localPositionXZ, localTargetPositionXZ);
+            sensor.AddObservation(currentTargetDistance); // Observe Distance to target
+            sensor.AddObservation((localTargetPositionXZ - localPositionXZ).normalized); // Observe direction to target
+            sensor.AddObservation(rgbd.velocity); // Observe rgbd velocity
         }
-        for(int i = observationIndex; i < maxObservations; i++){
+        else{
+            sensor.AddObservation(0f);
+            sensor.AddObservation(Vector2.zero);
             sensor.AddObservation(Vector3.zero);
         }
     }
     public override void OnActionReceived(ActionBuffers actions)
     {
         inputDirection = new Vector3(actions.ContinuousActions[0],0f, actions.ContinuousActions[1]);
-        isPressingBounce = actions.DiscreteActions[0] == 1;
-        isPressingStiff = actions.DiscreteActions[1] == 1;
-        float nextBounce = currentBounce;
-        if(isPressingBounce){
-            nextBounce += bounceIncrease * Time.deltaTime;
-            if(nextBounce > maxBounce){
-                nextBounce = maxBounce;
+        if(useBounceMeter){
+            isPressingBounce = actions.DiscreteActions[0] == 1;
+            isPressingStiff = actions.DiscreteActions[1] == 1;
+            float nextBounce = currentBounce;
+            if(isPressingBounce){
+                nextBounce += bounceIncrease * Time.deltaTime;
+                if(nextBounce > maxBounce){
+                    nextBounce = maxBounce;
+                }
             }
-        }
-        else if(isPressingStiff){
-            nextBounce -= bounceDecreaseFast * Time.deltaTime;
-            if(nextBounce < minBounce){
-                nextBounce = minBounce;
+            else if(isPressingStiff){
+                nextBounce -= bounceDecreaseFast * Time.deltaTime;
+                if(nextBounce < minBounce){
+                    nextBounce = minBounce;
+                }
             }
+            else{
+                nextBounce -= bounceDecreaseStandard * Time.deltaTime;
+                if(nextBounce < standardBounce){
+                    nextBounce = standardBounce;
+                }
+            }
+            
+            currentBounce = nextBounce;
         }
         else{
-            nextBounce -= bounceDecreaseStandard * Time.deltaTime;
-             if(nextBounce < standardBounce){
-                nextBounce = standardBounce;
-            }
+            currentBounce = maxBounce;
         }
-        currentBounce = nextBounce;
         
-        float currentGoalDistance = Vector3.Distance(towerGenerator.goalObject.transform.position, transform.position);
-
-        RaycastHit platformHit;
-        Vector3 rayDirection = (new Vector3(transform.position.x, transform.position.y -1f, transform.position.z) - transform.position).normalized;
-        if(Physics.Raycast(transform.position, rayDirection,out platformHit, 0.6f,   LayerMask.GetMask("Ground") )){
-            if(platformHit.transform.gameObject.tag == "Platform"&& !platformHit.transform.GetComponent<Platform>().hasBeenHit){
-                platformHit.transform.GetComponent<Platform>().hasBeenHit = true;
-                AddReward(0.01f);
-            }
-        }
-
-        SetReward(initalGoalDistance / currentGoalDistance);
     }
     public override void Heuristic(in ActionBuffers actionsOut)
     {
         ActionSegment<float> continuousActions = actionsOut.ContinuousActions;
-        ActionSegment<int> discreteActions = actionsOut.DiscreteActions;
-
         continuousActions[0] = Input.GetAxis("Horizontal");
         continuousActions[1] = Input.GetAxis("Vertical");
 
-        discreteActions[0] = Convert.ToInt32(Input.GetKey(KeyCode.J));
-        discreteActions[1] = Convert.ToInt32(Input.GetKey(KeyCode.K));
+        if(useBounceMeter){
+            ActionSegment<int> discreteActions = actionsOut.DiscreteActions;
+
+            discreteActions[0] = Convert.ToInt32(Input.GetKey(KeyCode.J));
+            discreteActions[1] = Convert.ToInt32(Input.GetKey(KeyCode.K));
+        }
     }
 
     private Vector3 NormalizeObservationVector(Vector3 vector, float minValue,  float maxValue){
@@ -162,7 +166,13 @@ public class BallAgent : Agent
 
     void Update()
     {
-        
+        if(isSpringing){
+            currentSpringTime += Time.deltaTime;
+            if(currentSpringTime >= springMaxTime){
+                currentSpringTime = 0f;
+                isSpringing = false;
+            }
+        }
     }
 
     void FixedUpdate(){
@@ -181,13 +191,14 @@ public class BallAgent : Agent
             */
         }
         else{
-            if(velocityXZ.magnitude > minVelocityMagnitude){
+            if(velocityXZ.magnitude > minVelocityMagnitude && !isSpringing){
+                // Standard slow down when no input is detected to reduce floaty movement
                 Vector3 oppositeDirection = new Vector3(-rgbd.velocity.x, 0f, -rgbd.velocity.z).normalized;
                 rgbd.AddForce(oppositeDirection * moveDeceleration, ForceMode.Acceleration);
             }
         }
 
-        if(velocityXZ.magnitude > maxMoveSpeed){
+        if(velocityXZ.magnitude > maxMoveSpeed && !isSpringing){
             // Slow down ball if its velocity exceeds the allowed maximum
             float magnitudeDifference = velocityXZ.magnitude - maxMoveSpeed;
             Vector3 oppositeDirection = -velocityXZ.normalized;
@@ -205,6 +216,12 @@ public class BallAgent : Agent
             float currentCamSpeed = camMoveSpeed * Mathf.Clamp(camTargetMaxDistance / camDistance, 0f, 2f);
             cameraTransform.position = Vector3.SmoothDamp(cameraTransform.position, cameraTargetPosition, ref camVelocity, camMoveSpeed);
         }
+
+
+        if(transform.localPosition.y < initialYPosition - deathDistance){
+            SetReward(-1f);
+            EndEpisode();
+        }
     }
 
     private void OnCollisionEnter(Collision other){
@@ -213,7 +230,7 @@ public class BallAgent : Agent
             rgbd.AddForce(bounceDirection * currentBounce, ForceMode.Impulse);
         }
         else if(other.gameObject.layer == LayerMask.NameToLayer("Death")){
-            SetReward(-1f);
+           SetReward(-1f);
            EndEpisode();
         }
     }
@@ -224,8 +241,26 @@ public class BallAgent : Agent
             EndEpisode();
         }
         else if(other.gameObject.layer == LayerMask.NameToLayer("Goal")){
-            SetReward(5f);
+            SetReward(1f);
             EndEpisode();
         }
+        else if(other.gameObject.layer == LayerMask.NameToLayer("Reward")){
+            Platform rewardPlatform = other.transform.parent.GetComponent<Platform>();
+            if(!rewardPlatform.hasBeenHit && rewardPlatform.gameObject == currentTargetPlatform){
+                rewardPlatform.hasBeenHit = true;
+                other.gameObject.GetComponent<MeshRenderer>().material = rewardAttainedMaterial;
+                AddReward(rewardFraction);
+                currentTargetPlatformIndex++;
+                currentTargetPlatform = bridgeGenerator.transform.GetChild(currentTargetPlatformIndex).gameObject;
+            }
+        }
+    }
+
+    public void Spring(Vector3 force, Vector3 springPosition){
+        isSpringing = true;
+        currentSpringTime = 0f;
+        transform.position = springPosition;
+        rgbd.velocity = Vector3.zero;
+        rgbd.AddForce(force, ForceMode.Impulse);
     }
 }

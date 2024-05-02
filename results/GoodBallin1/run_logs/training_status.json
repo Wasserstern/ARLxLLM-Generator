@@ -1,0 +1,29 @@
+{
+    "Ballin": {
+        "checkpoints": [
+            {
+                "steps": 201450,
+                "file_path": "results\\GoodBallin1\\Ballin\\Ballin-201450.onnx",
+                "reward": -0.9990069847235178,
+                "creation_time": 1714387520.0579557,
+                "auxillary_file_paths": [
+                    "results\\GoodBallin1\\Ballin\\Ballin-201450.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 201450,
+            "file_path": "results\\GoodBallin1\\Ballin.onnx",
+            "reward": -0.9990069847235178,
+            "creation_time": 1714387520.0579557,
+            "auxillary_file_paths": [
+                "results\\GoodBallin1\\Ballin\\Ballin-201450.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "0.30.0",
+        "torch_version": "1.13.1+cu117"
+    }
+}

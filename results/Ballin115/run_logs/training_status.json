@@ -1,0 +1,29 @@
+{
+    "Ballin": {
+        "checkpoints": [
+            {
+                "steps": 26486,
+                "file_path": "results\\Ballin115\\Ballin\\Ballin-26486.onnx",
+                "reward": -0.995933141618121,
+                "creation_time": 1714386383.2230551,
+                "auxillary_file_paths": [
+                    "results\\Ballin115\\Ballin\\Ballin-26486.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 26486,
+            "file_path": "results\\Ballin115\\Ballin.onnx",
+            "reward": -0.995933141618121,
+            "creation_time": 1714386383.2230551,
+            "auxillary_file_paths": [
+                "results\\Ballin115\\Ballin\\Ballin-26486.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "0.30.0",
+        "torch_version": "1.13.1+cu117"
+    }
+}
