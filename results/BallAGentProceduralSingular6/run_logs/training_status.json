@@ -1,0 +1,38 @@
+{
+    "Ballin": {
+        "checkpoints": [
+            {
+                "steps": 499991,
+                "file_path": "results\\BallAGentProceduralSingular6\\Ballin\\Ballin-499991.onnx",
+                "reward": -0.7777777777777778,
+                "creation_time": 1715681653.742011,
+                "auxillary_file_paths": [
+                    "results\\BallAGentProceduralSingular6\\Ballin\\Ballin-499991.pt"
+                ]
+            },
+            {
+                "steps": 500003,
+                "file_path": "results\\BallAGentProceduralSingular6\\Ballin\\Ballin-500003.onnx",
+                "reward": -0.7780938833570412,
+                "creation_time": 1715681653.8248737,
+                "auxillary_file_paths": [
+                    "results\\BallAGentProceduralSingular6\\Ballin\\Ballin-500003.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 500003,
+            "file_path": "results\\BallAGentProceduralSingular6\\Ballin.onnx",
+            "reward": -0.7780938833570412,
+            "creation_time": 1715681653.8248737,
+            "auxillary_file_paths": [
+                "results\\BallAGentProceduralSingular6\\Ballin\\Ballin-500003.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "0.30.0",
+        "torch_version": "1.13.1+cu117"
+    }
+}

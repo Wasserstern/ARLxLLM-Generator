@@ -1,0 +1,42 @@
+{
+    "name": "root",
+    "metadata": {
+        "timer_format_version": "0.1.0",
+        "start_time_seconds": "1715677690",
+        "python_version": "3.9.13 (tags/v3.9.13:6de2ca5, May 17 2022, 16:36:42) [MSC v.1929 64 bit (AMD64)]",
+        "command_line_arguments": "C:\\Users\\mrmar\\Everything\\Unity\\Projects\\RLPrototype1\\venv\\Scripts\\mlagents-learn --run-id=BallAgentProceduralSingular1",
+        "mlagents_version": "0.30.0",
+        "mlagents_envs_version": "0.30.0",
+        "communication_protocol_version": "1.5.0",
+        "pytorch_version": "1.13.1+cu117",
+        "numpy_version": "1.21.2",
+        "end_time_seconds": "1715677754"
+    },
+    "total": 63.761178400000006,
+    "count": 1,
+    "self": 0.016351300000003732,
+    "children": {
+        "run_training.setup": {
+            "total": 0.25403739999999964,
+            "count": 1,
+            "self": 0.25403739999999964
+        },
+        "TrainerController.start_learning": {
+            "total": 63.4907897,
+            "count": 1,
+            "self": 0.0009838000000073066,
+            "children": {
+                "TrainerController._reset_env": {
+                    "total": 63.489676,
+                    "count": 1,
+                    "self": 63.489676
+                },
+                "TrainerController._save_models": {
+                    "total": 0.00012989999999035717,
+                    "count": 1,
+                    "self": 0.00012989999999035717
+                }
+            }
+        }
+    }
+}
